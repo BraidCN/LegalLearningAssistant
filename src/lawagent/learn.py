@@ -292,7 +292,9 @@ def explain(term, cfg=None, conn=None):
             fb = _explain_fallback(term, results)
             gfb = verify(fb, results, conn=conn, min_quote_len=min_quote,
                          require_citation=True)
-            if gfb["pass"] or len(gfb["errors"]) < len(gate["errors"]):
+            # 模型答得完整但引文没过门禁时，保留内容并由 gate 标注问题，
+            # 不用短模板把整段回答换掉（那看起来就像“答案被截断”）。
+            if (not used) or len(answer) < 300:
                 answer, gate = fb, gfb
 
         return {
@@ -475,7 +477,9 @@ def analyze_case(facts, cfg=None, conn=None):
             fb = _case_fallback(facts, results, method, steps, disc)
             gfb = verify(fb, results, conn=conn, min_quote_len=min_quote,
                          require_citation=True)
-            if gfb["pass"] or len(gfb["errors"]) < len(gate["errors"]):
+            # 模型答得完整但引文没过门禁时，保留内容并由 gate 标注问题，
+            # 不用短模板把整段回答换掉（那看起来就像“答案被截断”）。
+            if (not used) or len(answer) < 300:
                 answer, gate = fb, gfb
 
         return dict(

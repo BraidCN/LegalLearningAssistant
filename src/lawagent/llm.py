@@ -78,6 +78,9 @@ def chat(messages, cfg=None, backend: str = ""):
             },
         }
         data = _post(url + "/api/chat", payload, timeout)
+        if data.get("done_reason") == "length":
+            print("[llm] 生成达到 num_predict=%s 上限，内容可能被截断"
+                  % payload["options"]["num_predict"], flush=True)
         return ((data.get("message") or {}).get("content") or "").strip()
 
     if mode in ("cloud", "openai"):

@@ -13,7 +13,7 @@
     "cloud_enabled": false,
     "ollama_url": "http://127.0.0.1:11434",
     "model": "qwen3.5:9b",
-    "num_ctx": 8192,
+    "num_ctx": 16384,
     "temperature": 0.2,
     "timeout": 300,
     "cloud": {
@@ -22,7 +22,8 @@
       "api_key_env": "DEEPSEEK_API_KEY",
       "api_key_file": "",
       "timeout": 120
-    }
+    },
+    "num_predict": 2000
   },
   "web": {
     "enabled": false,
