@@ -8,6 +8,7 @@ score 字段保持 FTS 量纲（-bm25），因为 router 用它和 routing.min_s
 纯向量命中按 ``余弦 × VEC_SCORE_SCALE`` 折算。融合排序分放在 ``rrf`` 字段。
 """
 from pathlib import Path
+import sqlite3
 
 from .config import ROOT, load_config, load_synonyms
 from .db import connect
@@ -57,6 +58,12 @@ def _rows_to_dicts(rows):
     return out
 
 
+def _match(toks, op: str = " ") -> str:
+    """把分词结果转成 FTS5 MATCH 表达式：每个词加双引号，避免 1.3 / a.b 里的点被当成语法。"""
+    quoted = ['"%s"' % str(t).replace('"', '""') for t in toks if str(t).strip()]
+    return op.join(quoted)
+
+
 def _fts(conn, match: str, k: int):
     rows = conn.execute(_SQL, (match, k)).fetchall()
     return _rows_to_dicts(rows)
@@ -92,9 +99,9 @@ def _search_with_law(conn, q, k, law_id, cand):
     toks = tokens(qt) or tokens(normalize_query(q))
     if not toks:
         return []
-    res = _fts_law(conn, " ".join(toks), k, law_id)
+    res = _fts_law(conn, _match(toks), k, law_id)
     if len(res) < max(3, k // 4):
-        match = " OR ".join(dict.fromkeys(toks))
+        match = _match(dict.fromkeys(toks), " OR ")
         seen = {r["article_id"] for r in res}
         for r in _fts_law(conn, match, k, law_id):
             if r["article_id"] not in seen:
@@ -113,14 +120,14 @@ def _fts_pipeline(conn, q: str, k: int):
     if hint is not None:
         res = _search_with_law(conn, q, k, hint[0], hint[1])
     if not res:
-        res = _fts(conn, " ".join(toks), k)
+        res = _fts(conn, _match(toks), k)
         if len(res) < max(3, k // 4):
             extra = []
             for key, vals in load_synonyms().items():
                 if key and key in q:
                     extra.extend(vals)
             more_toks = tokens(" ".join(extra)) if extra else []
-            match = " OR ".join(dict.fromkeys(toks + more_toks))
+            match = _match(dict.fromkeys(toks + more_toks), " OR ")
             seen = {r["article_id"] for r in res}
             for r in _fts(conn, match, k):
                 if r["article_id"] not in seen:
@@ -290,7 +297,11 @@ def search(q: str, k: int = 12, conn=None, cfg=None):
         if not toks:
             return []
         cfg = cfg if cfg is not None else load_config()
-        fts_rows = _fts_pipeline(conn, q, k)
+        try:
+            fts_rows = _fts_pipeline(conn, q, k)
+        except sqlite3.OperationalError:
+            # FTS5 语法兜底：任何怪字符（1.3、a.b、引号）都不该让整次检索失败
+            fts_rows = []
         vec_rows = _vector_rows(q, k, conn, cfg)
         if vec_rows:
             fused = _fuse(conn, fts_rows, vec_rows, k)
