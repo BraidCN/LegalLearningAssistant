@@ -12,7 +12,10 @@ routing.force 语义：
 """
 from __future__ import annotations
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
 HOT = "hot"
 NORMATIVE = "normative"
@@ -48,6 +51,62 @@ _KEYWORDS = {
 
 # “第X条” 形式（含阿拉伯数字与中文数字）视为法条型提问
 _ARTICLE_RE = re.compile(r"第[0-9０-９一二三四五六七八九十百千零〇两]+条")
+
+_LEXICON_FILE = Path(__file__).resolve().parents[2] / "configs" / "keywords.json"
+_ASCII_WORD = re.compile(r"^[A-Za-z0-9][A-Za-z0-9+#.\-]*$")
+
+
+@lru_cache(maxsize=1)
+def load_lexicon() -> dict:
+    """读取 configs/keywords.json；缺失或损坏时回退到内置热点词。"""
+    try:
+        data = json.loads(_LEXICON_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {"time_words": list(_KEYWORDS[HOT]), "time_patterns": [], "domains": {}}
+    if not isinstance(data, dict):
+        return {"time_words": list(_KEYWORDS[HOT]), "time_patterns": [], "domains": {}}
+    return {
+        "time_words": list(data.get("time_words") or _KEYWORDS[HOT]),
+        "time_patterns": list(data.get("time_patterns") or []),
+        "domains": data.get("domains") if isinstance(data.get("domains"), dict) else {},
+    }
+
+
+def _word_hit(text: str, word: str) -> bool:
+    """中文按子串匹配；英文缩写按词边界匹配，避免 AI 命中 BRAID / said。"""
+    if not word:
+        return False
+    if _ASCII_WORD.match(word):
+        pattern = r"(?<![A-Za-z0-9])%s(?![A-Za-z0-9])" % re.escape(word)
+        return re.search(pattern, text, re.I) is not None
+    return word in text
+
+
+def domain_hits(text: str) -> list[dict]:
+    """返回命中的领域：[{"key","label","hits":[...]}]，按词表顺序。"""
+    text = text or ""
+    out = []
+    for key, item in (load_lexicon().get("domains") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        hits = [w for w in (item.get("words") or []) if _word_hit(text, w)]
+        if hits:
+            out.append({"key": key, "label": item.get("label") or key,
+                        "hits": sorted(hits, key=len, reverse=True)})
+    return out
+
+
+def time_hits(text: str) -> list[str]:
+    """返回命中的时效词/年份，如 最近、今年、2026 年。"""
+    text = text or ""
+    lex = load_lexicon()
+    out = [w for w in (lex.get("time_words") or []) if w in text]
+    for pat in lex.get("time_patterns") or []:
+        try:
+            out.extend(m.group(0).strip() for m in re.finditer(pat, text))
+        except re.error:
+            continue
+    return sorted(dict.fromkeys(out), key=len, reverse=True)
 
 
 def _as_float(value, default: float = 0.0) -> float:
@@ -96,6 +155,8 @@ def classify_intent(q: str) -> str:
         return CONCEPT
     if _hits(text, _KEYWORDS[CASE]):
         return CASE
+    if domain_hits(text):
+        return NORMATIVE
     return CHAT
 
 
@@ -155,6 +216,9 @@ def decide(q: str, results: list[dict], cfg: dict) -> dict:
     text = (q or "").strip()
     intent = classify_intent(text)
     conf = assess_confidence(results, min_score)
+    domains_found = domain_hits(text)
+    times_found = time_hits(text)
+    domain_time = bool(domains_found and times_found)
 
     reasons: list[str] = []
     reasons.append("意图=%s（%s）" % (intent, _keyword_reason(text)))
@@ -163,6 +227,12 @@ def decide(q: str, results: list[dict], cfg: dict) -> dict:
         % (conf["top_score"], min_score, conf["count"],
            "置信充分" if conf["confident"] else "置信不足")
     )
+    if domains_found:
+        reasons.append("领域=%s（%s）" % (
+            "/".join(d["label"] for d in domains_found[:2]),
+            "、".join(domains_found[0]["hits"][:3])))
+    if times_found:
+        reasons.append("时效=%s" % "、".join(times_found[:3]))
     if force:
         reasons.append("① routing.force=%s 强制覆盖" % force)
     if force == "local":
@@ -172,18 +242,32 @@ def decide(q: str, results: list[dict], cfg: dict) -> dict:
             "intent": intent,
             "use_web": False,
             "backend": "local",
+            "domains": [d["key"] for d in domains_found],
+            "domain": domains_found[0]["key"] if domains_found else "",
+            "domain_label": domains_found[0]["label"] if domains_found else "",
             "reasons": _dedupe(reasons),
         }
 
     use_web = False
     backend = "local"
 
-    # ② 热点问题：联网 + 云端
+    # ② 时效性：领域词 + 时效词同时命中才联网（避免“电商/AI”这类词一出现就联网）
+    if domain_time and web_enabled:
+        use_web = True
+        reasons.append("② 领域=%s + 时效=%s → 联网检索时效信息"
+                       % (domains_found[0]["label"], "、".join(times_found[:2])))
+    elif intent == HOT:
+        if web_enabled:
+            reasons.append("② 热点但缺少领域词，不强制联网，交置信度判断")
+        else:
+            reasons.append("② 热点但 web.enabled=false，保持不联网")
+
+    # ② 热点问题：联网 + 云端（保留原行为）
     if intent == HOT:
-        if web_enabled or force == "web":
+        if not use_web and (web_enabled or force == "web"):
             use_web = True
             reasons.append("② 热点问题 → 联网检索时效信息")
-        else:
+        elif not use_web:
             reasons.append("② 热点问题但 web.enabled=false，保持不联网")
         if cloud_enabled:
             backend = "cloud"
@@ -244,5 +328,8 @@ def decide(q: str, results: list[dict], cfg: dict) -> dict:
         "intent": intent,
         "use_web": use_web,
         "backend": backend,
+        "domains": [d["key"] for d in domains_found],
+        "domain": domains_found[0]["key"] if domains_found else "",
+        "domain_label": domains_found[0]["label"] if domains_found else "",
         "reasons": _dedupe(reasons),
     }

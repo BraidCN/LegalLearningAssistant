@@ -274,7 +274,8 @@ class DecideTest(unittest.TestCase):
 
     def test_shape_and_reason_types(self):
         rep = decide("最近的热点案件", GOOD, CFG_FULL)
-        self.assertEqual(set(rep), {"intent", "use_web", "backend", "reasons"})
+        self.assertEqual(set(rep), {"intent", "use_web", "backend", "reasons",
+                                    "domains", "domain", "domain_label"})
         self.assertIn(rep["backend"], ("local", "cloud"))
         self.assertIn(rep["intent"], INTENTS)
         self.assertIsInstance(rep["use_web"], bool)
@@ -310,7 +311,7 @@ class NoSideEffectImportTest(unittest.TestCase):
                 modules.update(a.name.split(".")[0] for a in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
                 modules.add(node.module.split(".")[0])
-        self.assertTrue(modules.issubset({"__future__", "re"}), modules)
+        self.assertTrue(modules.issubset({"__future__", "re", "json", "functools", "pathlib"}), modules)
 
 
 if __name__ == "__main__":

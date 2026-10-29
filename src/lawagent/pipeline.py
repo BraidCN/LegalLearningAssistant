@@ -118,22 +118,33 @@ def _model_name(cfg, backend):
     return llm_cfg.get("model", "")
 
 
-def _generate(messages, cfg, preferred):
-    """按 preferred -> local -> cloud 顺序尝试，返回 (answer, backend, model)。"""
+def _generate(messages, cfg, preferred, reasons=None):
+    """按 preferred -> local -> cloud 顺序尝试，返回 (answer, backend, model)。
+
+    reasons 传入时记录回退原因（前端/日志可见，避免“标签写本地、实际走云端”）。
+    """
     llm_cfg = cfg.get("llm") or {}
     seen = set()
+    tried = []
     for backend in (preferred, "local", "cloud"):
         if backend not in ("local", "cloud") or backend in seen:
             continue
         if backend == "cloud" and backend != preferred and not llm_cfg.get("cloud_enabled", False):
             continue
         seen.add(backend)
+        tried.append(backend)
         try:
             answer = llm.chat(messages, cfg, backend=backend)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             answer = None
+            if reasons is not None:
+                reasons.append("%s 生成异常：%s" % (backend, type(exc).__name__))
         if answer:
+            if reasons is not None and backend != preferred:
+                reasons.append("已从 %s 回退到 %s" % (preferred, backend))
             return answer, backend, _model_name(cfg, backend)
+        if reasons is not None and backend == preferred:
+            reasons.append("%s 生成无输出（空回答）" % backend)
     return None, "", ""
 
 
@@ -147,7 +158,7 @@ def _fallback_answer(results):
     return "\n".join(lines)
 
 
-def ask(q: str, cfg=None, conn=None, top_k=None):
+def ask(q: str, cfg=None, conn=None, top_k=None, prefer_backend: str = ""):
     cfg = cfg or load_config()
     own = conn is None
     conn = conn or connect(cfg.get("paths", {}).get("db"))
@@ -160,8 +171,15 @@ def ask(q: str, cfg=None, conn=None, top_k=None):
             "intent": decision.get("intent", "chat"),
             "use_web": bool(decision.get("use_web")),
             "backend": decision.get("backend", "local"),
+            "domain": decision.get("domain", ""),
+            "domain_label": decision.get("domain_label", ""),
+            "domains": list(decision.get("domains") or []),
             "reasons": list(decision.get("reasons") or []),
         }
+
+        if prefer_backend in ("local", "cloud"):
+            route["backend"] = prefer_backend
+            route["reasons"].append("并发排队过久，改走%s" % ("云端" if prefer_backend == "cloud" else "本地"))
 
         web_sources = []
         if route["use_web"] and (cfg.get("web") or {}).get("enabled", False):
@@ -190,7 +208,7 @@ def ask(q: str, cfg=None, conn=None, top_k=None):
             {"role": "user", "content": "问题：%s\n\n%s\n\n请给出简洁回答。" % (q, "\n\n".join(parts))},
         ]
 
-        answer, used_backend, used_model = _generate(messages, cfg, route["backend"])
+        answer, used_backend, used_model = _generate(messages, cfg, route["backend"], route["reasons"])
         used = bool(answer)
         if not answer:
             answer = _fallback_answer(results)
@@ -208,7 +226,7 @@ def ask(q: str, cfg=None, conn=None, top_k=None):
                     % "；".join(gate["errors"]),
                 },
             ]
-            answer2, backend2, model2 = _generate(repair, cfg, used_backend or route["backend"])
+            answer2, backend2, model2 = _generate(repair, cfg, used_backend or route["backend"], route["reasons"])
             if answer2:
                 gate2 = verify(answer2, results, conn=conn, min_quote_len=min_quote, require_citation=require_citation)
                 if gate2["pass"] or len(gate2["errors"]) <= len(gate["errors"]):

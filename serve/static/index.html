@@ -511,6 +511,7 @@ function renderRoute(view, data) {
   box.hidden = false;
   if (hasRoute) {
     box.appendChild(badge("意图：" + (INTENT_LABEL[route.intent] || route.intent || "未知"), "mid"));
+    if (route.domain_label) box.appendChild(badge("领域：" + route.domain_label, "mid"));
     if (route.backend === "cloud") box.appendChild(badge("云端 DeepSeek", "ok"));
     else if (route.backend === "local") box.appendChild(badge("本地模型", "ok"));
     if (route.use_web !== undefined) {
