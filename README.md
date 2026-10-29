@@ -126,3 +126,9 @@ law-agent/
 - 本工具仅用于学习检索，不构成法律意见。
 - just-laws 数据为 MIT 许可；lawtext 等无许可数据未随包分发。
 - 数据快照为 2026-10 的 just-laws 版本，效力状态以国家法律法规数据库为准。
+
+## 许可
+
+- 本项目代码采用 **MIT** 许可，全文见 [LICENSE](LICENSE)。
+- 法条数据与第三方项目的来源、许可与署名见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 引用核验的思路上参考了 [legal-research-skill](https://github.com/Golden2002/legal-research-skill)（MIT），代码为独立实现。
