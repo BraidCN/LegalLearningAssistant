@@ -1,0 +1,75 @@
+{
+  "app": {
+    "host": "127.0.0.1",
+    "port": 8787
+  },
+  "paths": {
+    "db": "data/db/articles.db",
+    "auth_db": "data/db/auth.db",
+    "admin_token_file": "data/db/admin_token.txt"
+  },
+  "llm": {
+    "backend": "ollama",
+    "cloud_enabled": false,
+    "ollama_url": "http://127.0.0.1:11434",
+    "model": "qwen3.5:9b",
+    "num_ctx": 8192,
+    "temperature": 0.2,
+    "timeout": 300,
+    "cloud": {
+      "base_url": "https://api.deepseek.com/v1",
+      "model": "deepseek-flash",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "api_key_file": "",
+      "timeout": 120
+    }
+  },
+  "web": {
+    "enabled": false,
+    "top_k": 5,
+    "fetch_pages": 1,
+    "max_page_chars": 2500,
+    "timeout": 12,
+    "providers": [
+      "bing",
+      "ddg",
+      "360"
+    ]
+  },
+  "embedding": {
+    "enabled": true,
+    "provider": "ollama",
+    "model": "bge-m3",
+    "batch": 8,
+    "vectors": "data/db/embeddings.f16.npy",
+    "ids": "data/db/ids.npy",
+    "top_k": 50
+  },
+  "routing": {
+    "min_score": 20,
+    "long_query_chars": 120,
+    "force": "local"
+  },
+  "retrieval": {
+    "top_k": 12,
+    "max_context": 8
+  },
+  "gate": {
+    "retry_once": true,
+    "min_quote_len": 10
+  },
+  "ingest": {
+    "docs_db": "data/db/docs.db",
+    "docs_dir": "data/docs",
+    "users_dir": "data/users",
+    "inbox_dir": "data/inbox",
+    "wiki_raw": "data/wiki_raw",
+    "max_upload_mb": 50,
+    "chunk_chars": 700,
+    "chunk_overlap": 80,
+    "confirm_below": 0.6
+  },
+  "learn": {
+    "prefer_cloud": false
+  }
+}

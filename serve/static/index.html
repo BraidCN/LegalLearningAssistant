@@ -1,0 +1,1923 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LawAgent · 法学学习助手</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --ink: #1c1c1a;
+    --muted: #6b6b66;
+    --line: #e4e2dc;
+    --accent: #2f5d50;
+    --good: #2e7d32;
+    --bad: #b3261e;
+    --warn: #a15c00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    line-height: 1.65;
+  }
+  header {
+    padding: 28px 20px 10px; max-width: 960px; margin: 0 auto;
+  }
+  header h1 { margin: 0 0 6px; font-size: 24px; letter-spacing: .02em; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .head-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .userbox { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .userbox .nick { font-weight: 600; }
+  .userbox button { padding: 6px 12px; font-size: 12px; }
+  .userbox a {
+    padding: 6px 12px; font-size: 12px; color: var(--accent); text-decoration: none;
+    border: 1px solid var(--line); border-radius: 10px; background: #fbfbf9;
+  }
+  .userbox a:hover { border-color: var(--accent); }
+
+  /* 登录 / 令牌 */
+  .login-mask {
+    position: fixed; inset: 0; z-index: 1000; display: flex;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(24, 28, 26, .55);
+  }
+  .login-mask[hidden] { display: none; }
+  .login-card {
+    width: 100%; max-width: 440px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 16px; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+  }
+  .login-card h2 { margin: 0 0 4px; font-size: 20px; color: var(--ink); }
+  .login-card label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  .login-card input[type="text"] { width: 100%; }
+  .login-card .row { margin-top: 16px; }
+  .token-box {
+    white-space: pre-wrap; word-break: break-all; margin-top: 10px;
+    font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+    background: #f4f4f0; border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 12px 20px 60px; }
+  .panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; margin-bottom: 18px;
+  }
+  textarea {
+    width: 100%; min-height: 84px; resize: vertical; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 10px; font: inherit; color: var(--ink);
+    background: #fcfcfa; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea.tall { min-height: 132px; }
+  input[type="text"], input[type="number"] {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    font: inherit; color: var(--ink); background: #fcfcfa; outline: none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
+  .row { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+    padding: 10px 20px; font: inherit; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  button.ghost { background: #fbfbf9; color: var(--accent); border: 1px solid var(--line); }
+  button.ghost:hover { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip {
+    border: 1px solid var(--line); background: #fbfbf9; border-radius: 999px;
+    padding: 6px 12px; font-size: 12px; color: var(--muted); cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  h2 { font-size: 15px; margin: 22px 0 8px; color: var(--muted); font-weight: 600; }
+  .answer { white-space: pre-wrap; font-size: 15px; }
+  .gate {
+    margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 13px;
+    border: 1px solid var(--line); background: #f4f8f4;
+  }
+  .gate.bad { background: #fdf3f2; border-color: #f2c9c5; }
+  .badge {
+    display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px;
+    margin-right: 6px; vertical-align: 1px;
+  }
+  .badge.ok { color: var(--good); background: #e8f2e6; }
+  .badge.no { color: var(--bad); background: #fbe7e6; }
+  .badge.mid { color: var(--warn); background: #fdf1de; }
+  .badge.info { color: var(--accent); background: #e6efe9; }
+  .badge.plain { color: var(--muted); background: #f0efe9; }
+  .route-line { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+  .web-src .title a { color: var(--accent); text-decoration: none; }
+  .web-src .title a:hover { text-decoration: underline; }
+  .cite {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+    background: #fcfcfa;
+  }
+  .cite .title { font-weight: 600; font-size: 14px; }
+  .cite .sent { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .badge-row { margin-top: 4px; }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .hit { padding: 8px 10px; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .hit:last-child { border-bottom: 0; }
+  .hit .meta { color: var(--muted); font-size: 12px; }
+  .meta-line { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .meta-line:empty { display: none; }
+  .err { color: var(--bad); font-size: 13px; }
+  .loading { color: var(--muted); font-size: 14px; }
+  .empty { color: var(--muted); font-size: 13px; }
+
+  /* 导航标签 */
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+  .tab {
+    background: transparent; color: var(--muted); border: 1px solid transparent;
+    border-radius: 999px; padding: 7px 16px; font-size: 14px;
+  }
+  .tab:hover { color: var(--accent); border-color: var(--line); }
+  .tab.active { background: var(--accent); color: #fff; }
+  .tab.active:hover { color: #fff; border-color: transparent; }
+  .pane[hidden] { display: none; }
+
+  /* 表单 */
+  .field-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .field-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .field-row input[type="text"] { flex: 1 1 220px; min-width: 160px; }
+  .field-row input[type="number"] { width: 82px; }
+  .inline-label { color: var(--muted); font-size: 13px; }
+
+  /* 自测题目 */
+  .q-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    margin-bottom: 12px; background: #fcfcfa;
+  }
+  .q-card:last-child { margin-bottom: 0; }
+  .q-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .q-no { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .q-text { font-size: 15px; margin-bottom: 8px; }
+  .opts { display: flex; flex-direction: column; gap: 4px; }
+  .opt {
+    display: flex; gap: 8px; align-items: flex-start; font-size: 14px;
+    padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  }
+  .opt:hover { background: #f1f4f1; }
+  .opt input { margin-top: 5px; accent-color: var(--accent); }
+  .opt-text { flex: 1 1 auto; }
+  .opt-letter { flex: 0 0 16px; color: var(--muted); font-weight: 600; }
+  .opt.review-opt { cursor: default; }
+  .opt.review-opt:hover { background: transparent; }
+  .feedback {
+    margin-top: 10px; padding: 10px 12px; border-radius: 10px; font-size: 13px;
+    border: 1px solid var(--line); background: #f7f8f6;
+  }
+  .feedback.ok { background: #f2f8f2; border-color: #cfe5cd; }
+  .feedback.bad { background: #fdf3f2; border-color: #f2c9c5; }
+  .feedback .k { display: inline-block; margin-left: 2px; }
+  .feedback .why { margin-top: 6px; }
+  .feedback .cite { background: #fff; margin-top: 8px; }
+  .q-ref { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .q-ref:empty { display: none; }
+
+  /* 错题本 */
+  .wrong-card .wrong-mine { color: var(--bad); font-size: 13px; }
+  .wrong-card .wrong-truth { color: var(--good); font-size: 13px; }
+  .wrong-answers { margin-top: 6px; font-size: 13px; }
+
+.answer h3, .answer h4, .answer h5 { margin: 10px 0 4px; }
+.answer p { margin: 6px 0; line-height: 1.7; }
+.answer p:first-child { margin-top: 0; }
+.answer ul, .answer ol { margin: 6px 0 6px 20px; }
+.answer li { margin: 2px 0; line-height: 1.65; }
+.answer blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+.answer code { background: rgba(127,127,127,.15); padding: 1px 4px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="login-mask" id="login-mask" hidden>
+  <div class="login-card">
+    <h2>登录 LawAgent</h2>
+    <p class="hint">有邀请码 = 注册新账号；没有邀请码 = 用昵称和口令登录。</p>
+    <div id="login-form-box">
+      <label for="login-name">昵称</label>
+      <input type="text" id="login-name" autocomplete="nickname" placeholder="注册后固定，不能重复" maxlength="40">
+      <label for="login-pin">口令（4 位数字）</label>
+      <input type="text" id="login-pin" inputmode="numeric" autocomplete="off" placeholder="登录时填写；注册后自动生成" maxlength="4">
+      <label for="login-code">邀请码（仅注册时填）</label>
+      <input type="text" id="login-code" autocomplete="off" placeholder="留空即登录" maxlength="32">
+      <div class="row"><button id="login-btn">进入</button></div>
+      <div class="err" id="login-error"></div>
+    </div>
+    <div id="token-panel" hidden>
+      <p><b id="pin-title">注册成功</b></p>
+      <p class="hint">这是你的登录口令，只显示这一次，请务必记下：</p>
+      <div class="token-box" id="pin-value" style="font-size:28px;letter-spacing:8px;text-align:center"></div>
+      <div class="row">
+        <button id="pin-copy">复制口令</button>
+        <button class="ghost" id="token-enter">进入</button>
+      </div>
+      <div class="hint" id="token-copy-hint" style="margin-top:8px"></div>
+      <details style="margin-top:10px">
+        <summary class="hint">高级：查看本机令牌</summary>
+        <div class="token-box" id="token-value" style="margin-top:6px"></div>
+        <div class="row"><button class="ghost" id="token-copy">复制令牌</button></div>
+      </details>
+    </div>
+  </div>
+</div>
+<div class="login-mask" id="settings-mask" hidden>
+  <div class="login-card" style="text-align:left">
+    <h2>模型设置</h2>
+    <p class="hint">本地部署走本机 Ollama；云端走 DeepSeek 兼容 API。设置只保存在本机 <code>data/settings.json</code>。</p>
+
+    <label><input type="radio" name="llm-mode" value="local"> 本地模型（Ollama，免费用、数据不出门）</label>
+    <input type="text" id="set-local-model" placeholder="本地模型名，如 qwen3.5:9b" autocomplete="off">
+
+    <label style="margin-top:12px"><input type="radio" name="llm-mode" value="cloud"> 云端 API（DeepSeek，更准、按量计费）</label>
+    <input type="text" id="set-base-url" placeholder="接口地址，如 https://api.deepseek.com/v1" autocomplete="off">
+    <input type="text" id="set-cloud-model" placeholder="模型名，如 deepseek-flash" autocomplete="off">
+    <input type="password" id="set-key" placeholder="API Key（留空表示不修改）" autocomplete="off">
+
+    <div class="row" style="margin-top:12px">
+      <button id="set-save">保存</button>
+      <button class="ghost" id="set-cancel">取消</button>
+    </div>
+    <div class="err" id="set-msg"></div>
+    <div class="hint" id="set-state" style="margin-top:8px"></div>
+  </div>
+</div>
+<header>
+  <div class="head-top">
+    <div>
+      <h1>LawAgent · 法学学习助手</h1>
+      <p>本地法条库（现行有效）｜回答必须带条号与逐字引文，并经机器核对</p>
+    </div>
+    <div class="userbox" id="userbox" hidden>
+      <span class="nick" id="user-name"></span>
+      <button class="ghost" id="settings-btn">模型设置</button>
+      <a id="admin-link" href="/admin" hidden>管理后台</a>
+      <button class="ghost" id="logout-btn">退出</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="功能切换">
+    <button class="tab active" data-tab="ask" role="tab" aria-selected="true" aria-controls="pane-ask">问答</button>
+    <button class="tab" data-tab="concept" role="tab" aria-selected="false" aria-controls="pane-concept">概念</button>
+    <button class="tab" data-tab="case" role="tab" aria-selected="false" aria-controls="pane-case">案例</button>
+    <button class="tab" data-tab="quiz" role="tab" aria-selected="false" aria-controls="pane-quiz">自测</button>
+    <button class="tab" data-tab="wrong" role="tab" aria-selected="false" aria-controls="pane-wrong">错题本</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 问答 -->
+  <section class="pane" id="pane-ask" role="tabpanel">
+    <div class="panel">
+      <label class="field-label" for="q">问题</label>
+      <textarea id="q" placeholder="用大白话问，例如：公司拖欠工资怎么办？"></textarea>
+      <div class="row">
+        <button id="ask-send">提问</button>
+        <span class="hint">只依据库内条文回答；核不上就作废</span>
+      </div>
+      <div class="chips" id="ask-chips"></div>
+    </div>
+    <section class="result" id="ask-result" hidden></section>
+  </section>
+
+  <!-- 概念 -->
+  <section class="pane" id="pane-concept" role="tabpanel" hidden>
+    <div class="panel">
+      <label class="field-label" for="concept-q">法律概念</label>
+      <textarea id="concept-q" placeholder="例如：善意取得、表见代理、正当防卫"></textarea>
+      <div class="row">
+        <button id="concept-send">解释概念</button>
+        <span class="hint">概念解释同样要核对条号与引文</span>
+      </div>
+      <div class="chips" id="concept-chips"></div>
+    </div>
+    <section class="result" id="concept-result" hidden></section>
+  </section>
+
+  <!-- 案例 -->
+  <section class="pane" id="pane-case" role="tabpanel" hidden>
+    <div class="panel">
+      <label class="field-label" for="case-q">案情描述</label>
+      <textarea class="tall" id="case-q" placeholder="用一段话写清时间、主体、行为和争议点，例如：张某 2024 年 3 月入职某公司，未签书面劳动合同，10 月被口头辞退……"></textarea>
+      <div class="row">
+        <button id="case-send">分析案例</button>
+        <span class="hint">案情越具体，检索到的条文越准</span>
+      </div>
+      <div class="chips" id="case-chips"></div>
+    </div>
+    <section class="result" id="case-result" hidden></section>
+  </section>
+
+  <!-- 自测 -->
+  <section class="pane" id="pane-quiz" role="tabpanel" hidden>
+    <div class="panel">
+      <label class="field-label" for="quiz-topic">自测主题</label>
+      <div class="field-row">
+        <input type="text" id="quiz-topic" placeholder="例如：劳动合同解除 / 侵权责任">
+        <label class="inline-label" for="quiz-n">题量</label>
+        <input type="number" id="quiz-n" min="1" max="20" value="5">
+        <button id="quiz-send">生成题目</button>
+      </div>
+      <div class="hint">点选项作答，全部选完再点「提交批改」核对对错与依据</div>
+      <div class="chips" id="quiz-chips"></div>
+    </div>
+    <section class="result" id="quiz-result" hidden></section>
+    <div class="panel" id="quiz-box" hidden>
+      <h2 style="margin-top:0">题目</h2>
+      <div id="quiz-list"></div>
+      <div class="row">
+        <button id="quiz-submit">提交批改</button>
+        <span class="hint" id="quiz-progress"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 错题本 -->
+  <section class="pane" id="pane-wrong" role="tabpanel" hidden>
+    <div class="panel">
+      <div class="row" style="margin-top:0">
+        <button class="ghost" id="wrong-refresh">刷新错题本</button>
+        <span class="hint" id="wrong-hint">答错的题目会自动收进来</span>
+      </div>
+    </div>
+    <div class="panel" id="wrong-empty" hidden>
+      <div class="empty">错题本还是空的：去「自测」做几道题，答错的会自动收进来。</div>
+    </div>
+    <div id="wrong-list"></div>
+  </section>
+</main>
+
+<!-- 结果区模板：问答 / 概念 / 案例 / 自测共用（门禁徽标 + 引用卡片 + 路由徽标 + 网络来源） -->
+<template id="result-tpl">
+  <div class="panel">
+    <div class="route-line" data-role="route" hidden></div>
+    <div data-role="answer-panel" hidden>
+      <h2 style="margin-top:0">回答</h2>
+      <div class="answer" data-role="answer"></div>
+    </div>
+    <div class="gate" data-role="gate" hidden></div>
+    <div class="meta-line" data-role="meta"></div>
+  </div>
+  <div class="panel" data-role="cite-panel" hidden>
+    <h2 style="margin-top:0">引用核验</h2>
+    <div data-role="citations"></div>
+  </div>
+  <div class="panel" data-role="web-panel" hidden>
+    <h2 style="margin-top:0">网络来源 <span class="badge mid">未核验</span></h2>
+    <div data-role="web-sources"></div>
+  </div>
+  <div class="panel" data-role="hits-panel" hidden>
+    <details>
+      <summary>展开：检索命中的条文（前 10 条）</summary>
+      <div data-role="retrieved"></div>
+    </details>
+  </div>
+</template>
+
+<script>
+"use strict";
+
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+/* ---------------- DOM 小工具（外部文本一律 textContent） ---------------- */
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined && text !== null) node.textContent = String(text);
+  return node;
+}
+
+function badge(text, kind) {
+  return el("span", "badge " + (kind || "plain"), text);
+}
+
+function clear(node) {
+  while (node && node.firstChild) node.removeChild(node.firstChild);
+}
+
+/* ---------------- 令牌 / 请求封装 ---------------- */
+
+const TOKEN_KEY = "lk_token";
+let currentUser = null;
+
+function authToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+function setAuthToken(value) {
+  try { localStorage.setItem(TOKEN_KEY, value); } catch (e) {}
+}
+
+function clearAuthToken() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+}
+
+/* 所有请求统一入口：自动带 Authorization，便于集中处理登录态 */
+async function api(url, opts) {
+  const options = Object.assign({}, opts || {});
+  const headers = Object.assign({}, options.headers || {});
+  const token = authToken();
+  if (token) headers.Authorization = "Bearer " + token;
+  options.headers = headers;
+  return fetch(url, options);
+}
+
+/* ---------------- 结果区（模板克隆，各面板复用） ---------------- */
+
+const VIEW_HOSTS = {
+  ask: "ask-result",
+  concept: "concept-result",
+  case: "case-result",
+  quiz: "quiz-result"
+};
+const views = {};
+
+function getView(name) {
+  if (views[name]) return views[name];
+  const host = document.getElementById(VIEW_HOSTS[name]);
+  clear(host);
+  host.appendChild($("#result-tpl").content.cloneNode(true));
+  const pick = (role) => host.querySelector('[data-role="' + role + '"]');
+  const view = {
+    host: host,
+    route: pick("route"),
+    answerPanel: pick("answer-panel"),
+    answer: pick("answer"),
+    gate: pick("gate"),
+    meta: pick("meta"),
+    citePanel: pick("cite-panel"),
+    citations: pick("citations"),
+    webPanel: pick("web-panel"),
+    web: pick("web-sources"),
+    hitsPanel: pick("hits-panel"),
+    retrieved: pick("retrieved")
+  };
+  views[name] = view;
+  return view;
+}
+
+function resetView(view) {
+  view.host.hidden = false;
+  clear(view.route);
+  view.route.hidden = true;
+  view.route.removeAttribute("title");
+  clear(view.answer);
+  view.answerPanel.hidden = true;
+  clear(view.gate);
+  view.gate.className = "gate";
+  view.gate.hidden = true;
+  view.meta.textContent = "";
+  clear(view.citations);
+  view.citePanel.hidden = true;
+  clear(view.web);
+  view.webPanel.hidden = true;
+  clear(view.retrieved);
+  view.hitsPanel.hidden = true;
+}
+
+function showLoading(name, text) {
+  const view = getView(name);
+  resetView(view);
+  view.answerPanel.hidden = false;
+  view.answer.appendChild(el("span", "loading", text));
+}
+
+function showError(name, message) {
+  const view = getView(name);
+  resetView(view);
+  view.answerPanel.hidden = false;
+  view.answer.appendChild(el("span", "err", message));
+}
+
+const INTENT_LABEL = {hot: "热点", normative: "规范", concept: "概念", case: "案例", chat: "闲聊"};
+const MODE_LABEL = {ask: "问答", explain: "概念", case: "案例", quiz: "自测", grade: "批改", wrongbook: "错题本"};
+
+function renderRoute(view, data) {
+  const box = view.route;
+  clear(box);
+  const route = data.route || {};
+  const hasRoute = Boolean(route.intent || route.backend || route.use_web !== undefined);
+  if (!hasRoute && !data.endpoint) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  if (hasRoute) {
+    box.appendChild(badge("意图：" + (INTENT_LABEL[route.intent] || route.intent || "未知"), "mid"));
+    if (route.backend === "cloud") box.appendChild(badge("云端 DeepSeek", "ok"));
+    else if (route.backend === "local") box.appendChild(badge("本地模型", "ok"));
+    if (route.use_web !== undefined) {
+      const n = (data.web_sources || []).length;
+      box.appendChild(badge(route.use_web && n ? "已联网 · " + n + " 条来源" : "未联网",
+        route.use_web && n ? "info" : "plain"));
+    }
+  } else {
+    box.appendChild(badge("模式：" + (MODE_LABEL[data.endpoint] || data.endpoint), "info"));
+    const n = (data.web_sources || []).length;
+    if (n) box.appendChild(badge("已联网 · " + n + " 条来源", "info"));
+  }
+  if (Array.isArray(route.reasons) && route.reasons.length) {
+    box.title = route.reasons.join("\n");
+  }
+}
+
+function renderGate(view, data) {
+  const gate = data.gate;
+  const box = view.gate;
+  box.className = "gate";
+  clear(box);
+  if (!gate || typeof gate.pass !== "boolean") {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  if (gate.pass) {
+    box.appendChild(badge("门禁通过", "ok"));
+    box.appendChild(document.createTextNode("所有引用的条号与引文均可在本地库中核对。"));
+  } else {
+    box.className = "gate bad";
+    box.appendChild(badge("门禁未通过", "no"));
+    box.appendChild(document.createTextNode((gate.errors || []).join("；") || "引文无法核对。"));
+  }
+}
+
+function citationList(data) {
+  if (Array.isArray(data.citations) && data.citations.length) return data.citations;
+  if (data.gate && Array.isArray(data.gate.citations)) return data.gate.citations;
+  return [];
+}
+
+function citeCard(cite) {
+  const card = el("div", "cite");
+  if (typeof cite === "string") {
+    card.appendChild(el("div", "title", cite));
+    return card;
+  }
+  const c = cite || {};
+  const law = String(c.law || c.law_name || c.lawName || "").replace(/^《|》$/g, "");
+  const art = String(c.article_no || c.article || c.articleNo || "");
+  const title = el("div", "title", (law ? "《" + law + "》" : "") + art);
+  card.appendChild(title);
+  const row = el("div", "badge-row");
+  let hasBadge = false;
+  if (typeof c.found_in_context === "boolean" || typeof c.found_in_db === "boolean") {
+    hasBadge = true;
+    if (c.found_in_context) row.appendChild(badge("检索命中", "ok"));
+    else if (c.found_in_db) row.appendChild(badge("库内存在·非本次命中", "mid"));
+    else row.appendChild(badge("库内不存在", "no"));
+  }
+  if (typeof c.quote_ok === "boolean") {
+    hasBadge = true;
+    row.appendChild(badge(c.quote_ok ? "引文逐字一致" : "引文对不上", c.quote_ok ? "ok" : "no"));
+  }
+  if (typeof c.found === "boolean" && !hasBadge) {
+    hasBadge = true;
+    row.appendChild(badge(c.found ? "库内已核对" : "库内未找到", c.found ? "ok" : "no"));
+  }
+  if (hasBadge) card.appendChild(row);
+  const quoted = c.sentence || c.quote || c.quote_text || c.text || "";
+  if (quoted) card.appendChild(el("div", "sent", quoted));
+  return card;
+}
+
+function renderCitations(view, data) {
+  const list = citationList(data);
+  clear(view.citations);
+  if (!list.length) {
+    view.citePanel.hidden = true;
+    return;
+  }
+  view.citePanel.hidden = false;
+  list.forEach((c) => view.citations.appendChild(citeCard(c)));
+}
+
+function renderWebSources(view, list) {
+  clear(view.web);
+  if (!Array.isArray(list) || !list.length) {
+    view.webPanel.hidden = true;
+    return;
+  }
+  view.webPanel.hidden = false;
+  list.forEach((src) => {
+    const s = src || {};
+    const card = el("div", "cite web-src");
+    const title = el("div", "title");
+    const url = String(s.url || "");
+    if (/^https?:\/\//i.test(url)) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = s.title || url;
+      title.appendChild(a);
+    } else {
+      title.textContent = s.title || url || "（无标题）";
+    }
+    card.appendChild(title);
+    const meta = el("div", "badge-row");
+    meta.appendChild(badge("未核验", "mid"));
+    meta.appendChild(badge(s.fetched ? "已抓取正文" : "仅摘要", s.fetched ? "ok" : "plain"));
+    card.appendChild(meta);
+    if (s.snippet) card.appendChild(el("div", "sent", s.snippet));
+    view.web.appendChild(card);
+  });
+}
+
+function renderRetrieved(view, list) {
+  clear(view.retrieved);
+  if (!Array.isArray(list) || !list.length) {
+    view.hitsPanel.hidden = true;
+    return;
+  }
+  view.hitsPanel.hidden = false;
+  list.forEach((r, i) => {
+    const row = el("div", "hit");
+    const head = el("b", null, (i + 1) + ". 《" + (r.law_name || "") + "》" + (r.article_no || ""));
+    row.appendChild(head);
+    row.appendChild(el("div", "meta",
+      [r.status || "", r.chapter || "", "score " + (r.score || 0)].filter(Boolean).join("　")));
+    row.appendChild(el("div", null, r.preview || ""));
+    view.retrieved.appendChild(row);
+  });
+}
+
+function renderMeta(view, data) {
+  const parts = [];
+  const llm = data.llm || null;
+  if (llm && llm.used) parts.push("模型：" + (llm.backend || "?") + " / " + (llm.model || "?"));
+  else if (llm) parts.push("模型：未使用（检索直出）");
+  if (data.term) parts.push("概念：" + data.term);
+  if (data.topic) parts.push("主题：" + data.topic);
+  if (Array.isArray(data.questions) && data.endpoint === "quiz") parts.push("题目：" + data.questions.length + " 道");
+  if (Array.isArray(data.items) && data.endpoint === "wrongbook") parts.push("错题：" + data.items.length + " 条");
+  if (data.elapsed_ms) parts.push("耗时：" + data.elapsed_ms + " ms");
+  if (Array.isArray(data.retrieved) && data.retrieved.length) parts.push("命中：" + data.retrieved.length + " 条");
+  view.meta.textContent = parts.join("　");
+}
+
+/* 轻量 Markdown 渲染（先转义再套标签，避免 XSS） */
+function mdToHtml(src) {
+  const esc = String(src || "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lines = esc.split(/\r?\n/);
+  const out = [];
+  let list = null, inCode = false, buf = [];
+  const flush = () => { if (buf.length) { out.push("<p>" + buf.map(inline).join("<br>") + "</p>"); buf = []; } };
+  const closeList = () => { if (list) { out.push("</" + list + ">"); list = null; } };
+  const flushAll = () => { flush(); closeList(); };
+  const lastIndex = () => out.length - 1;
+
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    if (/^```/.test(line)) { flushAll(); inCode = !inCode; out.push(inCode ? "<pre><code>" : "</code></pre>"); continue; }
+    if (inCode) { out.push(line); continue; }
+
+    if (!line.trim()) { flush(); continue; }              // 空行只断段，不断列表
+
+    // 列表项内部的缩进续行：并到上一个 li
+    if (list && /^\s{2,}\S/.test(line) && /<\/li>$/.test(out[lastIndex()] || "")) {
+      out[lastIndex()] = out[lastIndex()].replace(/<\/li>$/, "<br>" + inline(line.trim()) + "</li>");
+      continue;
+    }
+
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    if (h) { flushAll(); const n = h[1].length + 2; out.push("<h" + n + ">" + inline(h[2]) + "</h" + n + ">"); continue; }
+
+    const q = line.match(/^&gt;\s?(.*)$/);
+    if (q) { flushAll(); out.push("<blockquote>" + inline(q[1]) + "</blockquote>"); continue; }
+
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+    if (ul) {
+      flush();
+      if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
+      out.push("<li>" + inline(ul[1]) + "</li>"); continue;
+    }
+
+    const ol = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+    if (ol) {
+      flush();
+      if (list !== "ol") {
+        closeList();
+        const n = parseInt(ol[1], 10);
+        out.push(n > 1 ? '<ol start="' + n + '">' : "<ol>");
+        list = "ol";
+      }
+      out.push("<li>" + inline(ol[2]) + "</li>"); continue;
+    }
+
+    closeList();
+    buf.push(line.trim());
+  }
+  flushAll();
+  if (inCode) out.push("</code></pre>");
+  return out.join("\n");
+
+  function inline(t) {
+    return t
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+  }
+}
+
+function renderResult(name, data) {
+  const view = getView(name);
+  resetView(view);
+  renderRoute(view, data);
+  renderGate(view, data);
+  const answer = data.answer === undefined || data.answer === null ? "" : String(data.answer);
+  if (answer) {
+    view.answerPanel.hidden = false;
+    view.answer.innerHTML = mdToHtml(answer);
+  }
+  renderCitations(view, data);
+  renderWebSources(view, data.web_sources || []);
+  renderRetrieved(view, data.retrieved || []);
+  renderMeta(view, data);
+  return view;
+}
+
+/* ---------------- 请求 ---------------- */
+
+async function readJSON(resp) {
+  let data = null;
+  try {
+    data = await resp.json();
+  } catch (e) {
+    throw new Error("服务返回了非 JSON 内容（HTTP " + resp.status + "）");
+  }
+  if (!resp.ok || (data && data.error)) {
+    const err = new Error((data && data.error) || ("请求失败（HTTP " + resp.status + "）"));
+    err.status = resp.status;
+    err.unavailable = Boolean(data && data.unavailable);
+    if ((resp.status === 401 || resp.status === 403) && authToken()) {
+      expireSession(resp.status === 403 ? "账号已被禁用或无权访问，请重新登录。" : "登录已失效，请重新登录。");
+    }
+    throw err;
+  }
+  return data || {};
+}
+
+async function postJSON(url, payload) {
+  const resp = await api(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  });
+  return readJSON(resp);
+}
+
+async function getJSON(url) {
+  const resp = await api(url, {headers: {"Accept": "application/json"}});
+  return readJSON(resp);
+}
+
+/* ---------------- 登录 / 退出 ---------------- */
+
+function setCurrentUser(user) {
+  currentUser = user || null;
+  const box = $("#userbox");
+  if (!box) return;
+  if (currentUser) {
+    box.hidden = false;
+    const name = currentUser.name || currentUser.user_id || "";
+    $("#user-name").textContent = name;
+    $("#user-name").title = currentUser.role === "admin" ? "管理员" : "普通用户";
+    const adminLink = $("#admin-link");
+    if (adminLink) adminLink.hidden = currentUser.role !== "admin";
+  } else {
+    box.hidden = true;
+    $("#user-name").textContent = "";
+    $("#user-name").removeAttribute("title");
+    const adminLink = $("#admin-link");
+    if (adminLink) adminLink.hidden = true;
+  }
+}
+
+function showLogin(message) {
+  const mask = $("#login-mask");
+  if (!mask) return;
+  mask.hidden = false;
+  $("#login-form-box").hidden = false;
+  $("#token-panel").hidden = true;
+  $("#login-error").textContent = message || "";
+  setTimeout(() => $("#login-name").focus(), 30);
+}
+
+function hideLogin() {
+  const mask = $("#login-mask");
+  if (mask) mask.hidden = true;
+}
+
+function showTokenPanel(token, user, pin) {
+  $("#login-form-box").hidden = true;
+  $("#token-panel").hidden = false;
+  $("#token-value").textContent = token;
+  $("#pin-value").textContent = pin || "";
+  $("#token-copy-hint").textContent = "";
+  setCurrentUser(user);
+}
+
+function expireSession(message) {
+  clearAuthToken();
+  setCurrentUser(null);
+  showLogin(message);
+}
+
+async function doRegister() {
+  const code = $("#login-code").value.trim();
+  const pin = $("#login-pin").value.trim();
+  const name = $("#login-name").value.trim();
+  const errBox = $("#login-error");
+  const btn = $("#login-btn");
+  errBox.textContent = "";
+  if (!name) {
+    errBox.textContent = "请输入昵称。";
+    $("#login-name").focus();
+    return;
+  }
+  btn.disabled = true;
+  try {
+    if (code) {
+      btn.textContent = "注册中……";
+      const data = await postJSON("/api/auth/register", {code: code, name: name});
+      setAuthToken(data.token);
+      showTokenPanel(data.token, {user_id: data.user_id, name: data.name, role: "user"}, data.pin);
+    } else {
+      if (!pin) {
+        errBox.textContent = "请输入 4 位口令。";
+        $("#login-pin").focus();
+        return;
+      }
+      btn.textContent = "登录中……";
+      const data = await postJSON("/api/auth/login", {name: name, pin: pin});
+      setAuthToken(data.token);
+      await enterApp();
+    }
+  } catch (err) {
+    errBox.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "进入";
+  }
+}
+
+async function enterApp() {
+  $("#token-value").textContent = "";
+  hideLogin();
+  try {
+    const me = await getJSON("/api/auth/me");
+    setCurrentUser(me);
+  } catch (err) {
+    if (err.status === 401 || err.status === 403) return;
+    showLogin("无法验证登录状态：" + err.message);
+    return;
+  }
+  if (typeof window.__afterAuth === "function") window.__afterAuth();
+  loadSettings();
+}
+
+async function copyToken() {
+  const text = $("#token-value").textContent || "";
+  const hint = $("#token-copy-hint");
+  try {
+    await navigator.clipboard.writeText(text);
+    hint.textContent = "已复制到剪贴板。";
+  } catch (e) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand("copy");
+      hint.textContent = "已复制到剪贴板。";
+    } catch (e2) {
+      hint.textContent = "复制失败，请手动选择上方令牌。";
+    }
+    document.body.removeChild(area);
+  }
+}
+
+
+async function loadSettings() {
+  try {
+    const st = await getJSON("/api/settings");
+    const mode = st.mode === "cloud" ? "cloud" : "local";
+    document.querySelectorAll('input[name="llm-mode"]').forEach((el) => { el.checked = el.value === mode; });
+    $("#set-local-model").value = st.local_model || "";
+    $("#set-base-url").value = st.base_url || "https://api.deepseek.com/v1";
+    $("#set-cloud-model").value = st.cloud_model || "deepseek-flash";
+    $("#set-key").value = "";
+    $("#set-state").textContent = "当前：" + (mode === "cloud"
+      ? "云端 API（" + (st.cloud_model || "deepseek-flash") + "）"
+      : "本地模型（" + (st.local_model || "默认") + "）")
+      + (st.has_key ? "｜已保存密钥" : "");
+    syncModeFields();
+  } catch (e) { /* 忽略 */ }
+}
+
+function syncModeFields() {
+  const cloud = document.querySelector('input[name="llm-mode"][value="cloud"]').checked;
+  ["set-base-url", "set-cloud-model", "set-key"].forEach((id) => { $("#" + id).disabled = !cloud; });
+  $("#set-local-model").disabled = cloud;
+}
+
+async function saveSettings() {
+  const mode = document.querySelector('input[name="llm-mode"]:checked').value;
+  const body = {
+    mode: mode,
+    local_model: $("#set-local-model").value.trim(),
+    base_url: $("#set-base-url").value.trim(),
+    cloud_model: $("#set-cloud-model").value.trim(),
+    api_key: $("#set-key").value.trim(),
+  };
+  $("#set-msg").textContent = "";
+  try {
+    const r = await postJSON("/api/settings", body);
+    $("#set-msg").textContent = "已保存，立即生效。";
+    $("#set-key").value = "";
+    const st = r.settings || {};
+    $("#set-state").textContent = "当前：" + (st.mode === "cloud"
+      ? "云端 API（" + (st.cloud_model || "deepseek-flash") + "）"
+      : "本地模型（" + (st.local_model || "默认") + "）");
+  } catch (e) {
+    $("#set-msg").textContent = e.message;
+  }
+}
+
+$("#settings-btn").onclick = async () => { $("#settings-mask").hidden = false; await loadSettings(); };
+$("#set-cancel").onclick = () => { $("#settings-mask").hidden = true; };
+$("#set-save").onclick = saveSettings;
+document.querySelectorAll('input[name="llm-mode"]').forEach((el) => { el.addEventListener("change", syncModeFields); });
+
+async function bootAuth() {
+  // 个人本地版：单用户，免登录
+  setCurrentUser({ user_id: "owner", name: "本地用户", role: "admin" });
+  hideLogin();
+  const logout = $("#logout-btn");
+  if (logout) logout.style.display = "none";
+  if (typeof window.__afterAuth === "function") window.__afterAuth();
+}
+
+$("#login-btn").onclick = doRegister;
+$("#token-copy").onclick = copyToken;
+$("#token-enter").onclick = enterApp;
+$("#logout-btn").onclick = () => {
+  clearAuthToken();
+  setCurrentUser(null);
+  location.reload();
+};
+$("#login-code").addEventListener("keydown", (e) => { if (e.key === "Enter") doRegister(); });
+$("#login-name").addEventListener("keydown", (e) => { if (e.key === "Enter") doRegister(); });
+$("#login-pin").addEventListener("keydown", (e) => { if (e.key === "Enter") doRegister(); });
+$("#pin-copy").onclick = () => {
+  const text = $("#pin-value").textContent || "";
+  navigator.clipboard.writeText(text).then(() => {
+    $("#token-copy-hint").textContent = "口令已复制。";
+  }).catch(() => { $("#token-copy-hint").textContent = "复制失败，请手动抄下。"; });
+};
+
+/* ---------------- 问答 / 概念 / 案例 ---------------- */
+
+const ACTIONS = {
+  ask: {
+    url: "/api/ask", input: "#q", button: "#ask-send", view: "ask",
+    payload: (text) => ({q: text}),
+    loading: "检索与核验中……（本地模型首次加载可能较慢）"
+  },
+  concept: {
+    url: "/api/explain", input: "#concept-q", button: "#concept-send", view: "concept",
+    payload: (text) => ({q: text}),
+    loading: "解释并核对条文中……"
+  },
+  case: {
+    url: "/api/case", input: "#case-q", button: "#case-send", view: "case",
+    payload: (text) => ({q: text}),
+    loading: "分析案情并核对依据中……"
+  }
+};
+
+async function runAction(name) {
+  const cfg = ACTIONS[name];
+  const input = $(cfg.input);
+  const text = input.value.trim();
+  if (!text) {
+    input.focus();
+    return;
+  }
+  const btn = $(cfg.button);
+  btn.disabled = true;
+  showLoading(cfg.view, cfg.loading);
+  try {
+    const data = await postJSON(cfg.url, cfg.payload(text));
+    renderResult(cfg.view, data);
+  } catch (err) {
+    showError(cfg.view, "请求失败：" + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------------- 自测 ---------------- */
+
+const quizState = {items: [], answers: {}};
+
+function labelOf(text) {
+  const m = String(text || "").match(/^\s*([A-Za-z])\s*[.、。:：)）]/);
+  return m ? m[1].toUpperCase() : "";
+}
+
+function stripLabel(text) {
+  return String(text || "").replace(/^\s*[A-Za-z]\s*[.、。:：)）]\s*/, "").trim();
+}
+
+/* 选项可能是 "A. 文字" 字符串，也可能是 {label, text} 对象 */
+function optionParts(opt, i) {
+  const fallback = String.fromCharCode(65 + i);
+  if (opt && typeof opt === "object") {
+    const text = opt.text != null ? opt.text : (opt.content != null ? opt.content : "");
+    return {label: String(opt.label || fallback), text: String(text)};
+  }
+  const s = String(opt === undefined || opt === null ? "" : opt).trim();
+  const m = s.match(/^\s*([A-Za-z])\s*[.、。:：)）]\s*/);
+  if (m) return {label: m[1].toUpperCase(), text: s.slice(m[0].length).trim()};
+  return {label: fallback, text: s};
+}
+
+function optionLabel(opt, i) {
+  const parts = optionParts(opt, i);
+  return parts.label + ". " + parts.text;
+}
+
+function updateProgress() {
+  const total = quizState.items.length;
+  const answered = Object.keys(quizState.answers).length;
+  $("#quiz-progress").textContent = total ? "共 " + total + " 题，已答 " + answered + " 题" : "";
+  $("#quiz-submit").disabled = !total || answered === 0;
+}
+
+function questionCard(q, index) {
+  const card = el("div", "q-card");
+  card.dataset.index = String(index);
+
+  const head = el("div", "q-head");
+  head.appendChild(el("span", "q-no", "第 " + (index + 1) + " 题"));
+  if (q.topic) head.appendChild(badge(q.topic, "plain"));
+  if (q.article_ref) head.appendChild(badge(String(q.article_ref), "info"));
+  card.appendChild(head);
+
+  card.appendChild(el("div", "q-text", q.question || "（题目文本缺失）"));
+
+  const options = Array.isArray(q.options) ? q.options : [];
+  const opts = el("div", "opts");
+  options.forEach((opt, i) => {
+    const parts = optionParts(opt, i);
+    const label = el("label", "opt");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "quiz-" + index;
+    input.value = parts.label;
+    input.addEventListener("change", () => {
+      quizState.answers[q.id] = {
+        item_id: q.id,
+        answer: parts.label,
+        index: i,
+        text: parts.text
+      };
+      const fb = card.querySelector('[data-role="feedback"]');
+      if (fb) {
+        clear(fb);
+        fb.hidden = true;
+        fb.className = "feedback";
+      }
+      updateProgress();
+    });
+    label.appendChild(input);
+    label.appendChild(el("span", "opt-letter", parts.label));
+    label.appendChild(el("span", "opt-text", parts.text));
+    opts.appendChild(label);
+  });
+  card.appendChild(opts);
+
+  const feedbackBox = el("div", "feedback");
+  feedbackBox.dataset.role = "feedback";
+  feedbackBox.hidden = true;
+  card.appendChild(feedbackBox);
+
+  card.appendChild(el("div", "q-ref", q.article_ref ? "依据：" + q.article_ref : ""));
+  return card;
+}
+
+function renderQuiz(data) {
+  const list = $("#quiz-list");
+  clear(list);
+  quizState.answers = {};
+  quizState.items = (Array.isArray(data.questions) ? data.questions : []).map((q, i) => {
+    const item = Object.assign({}, q);
+    item.id = item.id || item.item_id || "q" + (i + 1);
+    return item;
+  });
+
+  const box = $("#quiz-box");
+  box.hidden = false;
+  if (!quizState.items.length) {
+    const rejected = Array.isArray(data.rejected) ? data.rejected : [];
+    const why = rejected.length ? "不合规的题目：" + rejected.slice(0, 3).join("；") : "换个更具体的主题再试。";
+    list.appendChild(el("div", "empty", "服务端没有返回合格的题目。" + why));
+    $("#quiz-submit").hidden = true;
+    $("#quiz-progress").textContent = "";
+    return;
+  }
+  $("#quiz-submit").hidden = false;
+  quizState.items.forEach((q, i) => list.appendChild(questionCard(q, i)));
+  updateProgress();
+}
+
+function serverVerdict(res) {
+  if (!res) return null;
+  if (typeof res.correct === "boolean") return res.correct;
+  if (typeof res.is_correct === "boolean") return res.is_correct;
+  if (typeof res.right === "boolean") return res.right;
+  return null;
+}
+
+function localVerdict(q, picked) {
+  const truth = q.answer !== undefined && q.answer !== null ? q.answer : q.correct_answer;
+  if (truth === undefined || truth === null || truth === "") return null;
+  if (typeof truth === "number") return picked.index === truth;
+  const t = String(truth).trim();
+  const text = String(picked.text).trim();
+  if (/^[A-Za-z]$/.test(t)) return String(picked.answer).toUpperCase() === t.toUpperCase();
+  if (t === text || stripLabel(t) === text) return true;
+  const truthLabel = labelOf(t);
+  if (truthLabel) return truthLabel === String(picked.answer).toUpperCase();
+  return t === stripLabel(text);
+}
+
+function fillFeedback(card, state) {
+  const box = card ? card.querySelector('[data-role="feedback"]') : null;
+  if (!box) return;
+  clear(box);
+  box.hidden = false;
+  box.className = "feedback";
+
+  if (state.missing) {
+    box.appendChild(badge("未作答", "plain"));
+    box.appendChild(document.createTextNode("先选一个选项再提交。"));
+    return;
+  }
+  if (state.pending) {
+    box.appendChild(el("span", "loading", "批改中……"));
+    return;
+  }
+  if (state.error) {
+    box.appendChild(el("span", "err", "批改失败：" + state.error));
+    return;
+  }
+
+  const res = state.res || {};
+  const verdict = state.verdict;
+  if (verdict === true) {
+    box.className = "feedback ok";
+    box.appendChild(badge("答对", "ok"));
+  } else if (verdict === false) {
+    box.className = "feedback bad";
+    box.appendChild(badge("答错", "no"));
+  } else {
+    box.appendChild(badge("已提交", "plain"));
+  }
+
+  const truthLabel = res.correct_answer !== undefined && res.correct_answer !== null
+    ? String(res.correct_answer)
+    : (res.expected !== undefined && res.expected !== null && res.correct === undefined
+      ? String(res.expected) : "");
+  const truthText = res.correct_text ? String(res.correct_text) : "";
+  if (truthLabel || truthText) {
+    box.appendChild(el("span", "k", "正确答案：" + [truthLabel, truthText].filter(Boolean).join(". ")));
+  }
+
+  const why = res.explanation || res.explain || res.reason || res.analysis ||
+    (typeof res.answer === "string" ? res.answer : "");
+  if (why) box.appendChild(el("div", "why", why));
+
+  const cites = citationList(res);
+  cites.forEach((c) => box.appendChild(citeCard(c)));
+
+  const gate = res.gate;
+  if (gate && typeof gate.pass === "boolean") {
+    box.appendChild(badge(gate.pass ? "门禁通过" : "门禁未通过", gate.pass ? "ok" : "no"));
+    if (!gate.pass && Array.isArray(gate.errors) && gate.errors.length) {
+      box.appendChild(el("span", "err", gate.errors.join("；")));
+    }
+  }
+  if (res.recorded) box.appendChild(badge("已记入错题本", "mid"));
+}
+
+async function submitQuiz() {
+  if (!quizState.items.length) return;
+  const btn = $("#quiz-submit");
+  btn.disabled = true;
+
+  let answered = 0;
+  let graded = 0;
+  let correct = 0;
+
+  for (let i = 0; i < quizState.items.length; i++) {
+    const q = quizState.items[i];
+    const picked = quizState.answers[q.id];
+    const card = $('#quiz-list .q-card[data-index="' + i + '"]');
+    if (!picked) {
+      fillFeedback(card, {missing: true});
+      continue;
+    }
+    answered++;
+    fillFeedback(card, {pending: true});
+    try {
+      const res = await postJSON("/api/grade", {
+        item_id: picked.item_id,
+        answer: picked.answer,
+        index: picked.index,
+        text: picked.text
+      });
+      let verdict = serverVerdict(res);
+      if (verdict === null) verdict = localVerdict(q, picked);
+      if (verdict !== null) {
+        graded++;
+        if (verdict) correct++;
+      }
+      if (res && res.recorded) wrongLoaded = false;
+      fillFeedback(card, {res: res, verdict: verdict});
+    } catch (err) {
+      const verdict = localVerdict(q, picked);
+      if (verdict !== null) {
+        graded++;
+        if (verdict) correct++;
+      }
+      fillFeedback(card, {error: err.message, verdict: verdict, res: {}});
+    }
+  }
+
+  btn.disabled = false;
+  const parts = ["已答 " + answered + " / " + quizState.items.length + " 题"];
+  if (graded) parts.push("判定 " + graded + " 题，答对 " + correct + " 题");
+  else parts.push("批改结果缺少对错字段，仅显示依据");
+  $("#quiz-progress").textContent = parts.join("　");
+}
+
+async function createQuiz() {
+  const input = $("#quiz-topic");
+  const topic = input.value.trim();
+  if (!topic) {
+    input.focus();
+    return;
+  }
+  let n = parseInt($("#quiz-n").value, 10);
+  if (!Number.isFinite(n)) n = 5;
+  n = Math.max(1, Math.min(20, n));
+  $("#quiz-n").value = String(n);
+
+  const btn = $("#quiz-send");
+  btn.disabled = true;
+  showLoading("quiz", "生成题目中……（需要检索条文并组织选项）");
+  $("#quiz-box").hidden = true;
+  clear($("#quiz-list"));
+  $("#quiz-progress").textContent = "";
+  try {
+    const data = await postJSON("/api/quiz", {topic: topic, n: n});
+    renderResult("quiz", data);
+    renderQuiz(data);
+  } catch (err) {
+    showError("quiz", "请求失败：" + err.message);
+    $("#quiz-box").hidden = true;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------------- 错题本 ---------------- */
+
+let wrongLoaded = false;
+
+function wrongCard(item, index) {
+  const panel = el("div", "panel wrong-card");
+
+  const head = el("div", "q-head");
+  head.appendChild(el("span", "q-no", "第 " + (index + 1) + " 条"));
+  if (item.topic) head.appendChild(badge(item.topic, "plain"));
+  if (item.article_ref) head.appendChild(badge(String(item.article_ref), "info"));
+  panel.appendChild(head);
+
+  panel.appendChild(el("div", "q-text", item.question || item.title || item.stem || "（题目文本缺失）"));
+
+  const mineRaw = item.user_answer !== undefined && item.user_answer !== null ? item.user_answer : item.mine;
+  const mine = mineRaw === undefined || mineRaw === null ? "" : String(mineRaw).trim();
+  const truthLabel = item.correct_answer !== undefined && item.correct_answer !== null
+    ? String(item.correct_answer)
+    : (typeof item.answer === "string" && item.answer.length <= 4 ? item.answer : "");
+  const truthText = item.correct_text ? String(item.correct_text) : "";
+
+  const options = Array.isArray(item.options) ? item.options : [];
+  if (options.length) {
+    const opts = el("div", "opts review");
+    options.forEach((opt, i) => {
+      const parts = optionParts(opt, i);
+      const line = el("div", "opt review-opt");
+      line.appendChild(el("span", "opt-letter", parts.label));
+      line.appendChild(el("span", "opt-text", parts.text));
+      const isMine = mine && (mine.toUpperCase() === parts.label.toUpperCase() || mine === parts.text);
+      const isTruth = truthLabel && parts.label.toUpperCase() === truthLabel.toUpperCase();
+      if (isMine) line.appendChild(badge("你的答案", "no"));
+      if (isTruth) line.appendChild(badge("正确答案", "ok"));
+      opts.appendChild(line);
+    });
+    panel.appendChild(opts);
+  }
+
+  const answers = el("div", "wrong-answers");
+  if (mine) answers.appendChild(el("div", "wrong-mine", "你的答案：" + mine));
+  if (truthLabel || truthText) {
+    answers.appendChild(el("div", "wrong-truth",
+      "正确答案：" + [truthLabel, truthText].filter(Boolean).join(". ")));
+  }
+  if (answers.childNodes.length) panel.appendChild(answers);
+
+  const why = item.explain || item.explanation || item.reason || item.analysis || "";
+  if (why) panel.appendChild(el("div", "why", why));
+
+  const cites = Array.isArray(item.citations) ? item.citations
+    : (item.gate && Array.isArray(item.gate.citations) ? item.gate.citations : []);
+  cites.forEach((c) => panel.appendChild(citeCard(c)));
+
+  const gate = item.gate;
+  if (gate && typeof gate.pass === "boolean") {
+    panel.appendChild(badge(gate.pass ? "门禁通过" : "门禁未通过", gate.pass ? "ok" : "no"));
+    if (!gate.pass && Array.isArray(gate.errors) && gate.errors.length) {
+      panel.appendChild(el("div", "err", gate.errors.join("；")));
+    }
+  }
+
+  const when = item.created_at || item.time || item.ts || "";
+  if (when) panel.appendChild(el("div", "meta-line", when));
+  return panel;
+}
+
+function renderWrongbook(data) {
+  const list = $("#wrong-list");
+  clear(list);
+  const items = Array.isArray(data.items) ? data.items : [];
+  $("#wrong-hint").textContent = items.length ? "共 " + items.length + " 条" : "暂无记录";
+  $("#wrong-empty").hidden = items.length > 0;
+  items.forEach((item, i) => list.appendChild(wrongCard(item, i)));
+}
+
+async function loadWrongbook(force) {
+  if (wrongLoaded && !force) return;
+  const btn = $("#wrong-refresh");
+  btn.disabled = true;
+  $("#wrong-hint").textContent = "加载中……";
+  clear($("#wrong-list"));
+  $("#wrong-empty").hidden = true;
+  try {
+    const data = await getJSON("/api/wrongbook");
+    renderWrongbook(data);
+    wrongLoaded = true;
+  } catch (err) {
+    $("#wrong-hint").textContent = "";
+    const panel = el("div", "panel");
+    panel.appendChild(el("div", "err", "加载失败：" + err.message));
+    $("#wrong-list").appendChild(panel);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ---------------- 标签页 ---------------- */
+
+function switchTab(name) {
+  $$(".tab").forEach((tab) => {
+    const on = tab.dataset.tab === name;
+    tab.classList.toggle("active", on);
+    tab.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  $$(".pane").forEach((pane) => {
+    pane.hidden = pane.id !== "pane-" + name;
+  });
+  if (name === "wrong") loadWrongbook(false);
+}
+
+/* ---------------- 初始化 ---------------- */
+
+const EXAMPLES = {
+  ask: [
+    "公司拖欠工资怎么办？",
+    "正当防卫和防卫过当怎么区分？",
+    "离婚时夫妻共同财产怎么分？",
+    "网购商品可以七天无理由退货吗？",
+    "租的房子漏水，房东不管怎么办？"
+  ],
+  concept: ["善意取得", "表见代理", "正当防卫", "缔约过失责任", "不当得利"],
+  case: [
+    "员工未签书面劳动合同被辞退，能主张二倍工资吗",
+    "网购到假货，可以要求三倍赔偿吗",
+    "邻居装修砸了承重墙怎么办"
+  ],
+  quiz: ["劳动合同解除", "侵权责任", "买卖合同", "婚姻家庭"]
+};
+
+function renderChips(containerId, texts, inputSelector, onPick) {
+  const box = document.getElementById(containerId);
+  texts.forEach((text) => {
+    const chip = el("span", "chip", text);
+    chip.onclick = () => {
+      $(inputSelector).value = text;
+      onPick();
+    };
+    box.appendChild(chip);
+  });
+}
+
+function bindEnter(selector, action) {
+  const node = $(selector);
+  if (!node) return;
+  node.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      action();
+    }
+  });
+}
+
+$$(".tab").forEach((tab) => {
+  tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+});
+
+$("#ask-send").onclick = () => runAction("ask");
+$("#concept-send").onclick = () => runAction("concept");
+$("#case-send").onclick = () => runAction("case");
+$("#quiz-send").onclick = createQuiz;
+$("#quiz-submit").onclick = submitQuiz;
+$("#wrong-refresh").onclick = () => loadWrongbook(true);
+
+bindEnter("#q", () => runAction("ask"));
+bindEnter("#concept-q", () => runAction("concept"));
+bindEnter("#case-q", () => runAction("case"));
+bindEnter("#quiz-topic", createQuiz);
+
+renderChips("ask-chips", EXAMPLES.ask, "#q", () => runAction("ask"));
+renderChips("concept-chips", EXAMPLES.concept, "#concept-q", () => runAction("concept"));
+renderChips("case-chips", EXAMPLES.case, "#case-q", () => runAction("case"));
+renderChips("quiz-chips", EXAMPLES.quiz, "#quiz-topic", createQuiz);
+
+updateProgress();
+
+/* ---------------- 归档：拖拽上传 + Agent 决策回执 ---------------- */
+(function () {
+  const state = {doc: null};
+  const STATUS = {done: ["已归档", "ok"], partial: ["部分完成", "mid"], need_confirm: ["待确认", "mid"], failed: ["失败", "no"]};
+  const TARGET_LABEL = {note: "课程笔记", paper: "法学论文 / 文献", doc: "资料索引", case: "案例", law: "法条核对"};
+  const COURSE_LABEL = { "civil-general": "民法", "criminal-general": "刑法总论", "criminal-specific": "刑法分论", "jurisprudence": "法理学", "roman-law": "罗马法", "evidence": "证据法", "confiscation": "追缴没收法", "energy": "环境法" };
+
+  const style = document.createElement("style");
+  style.textContent = [
+    ".dropzone{border:2px dashed #c9d6c9;border-radius:14px;padding:24px 16px;text-align:center;color:#6b6b66;background:#fbfcfa;cursor:pointer;}",
+    ".dropzone:hover{border-color:var(--accent);color:var(--accent);}",
+    ".dropzone.drag{border-color:var(--accent);background:#eef4ef;color:var(--accent);}",
+    ".dropzone b{display:block;font-size:15px;margin-bottom:4px;color:var(--ink);}",
+    ".filechip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fbfbf9;border-radius:999px;padding:6px 12px;font-size:12px;}",
+    ".filechip .x{cursor:pointer;color:var(--muted);}",
+    ".filechip .x:hover{color:var(--bad);}",
+    ".receipt{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:#fff;}",
+    ".receipt.need{border-color:#e8cf9a;background:#fffdf6;}",
+    ".receipt .r-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px;}",
+    ".receipt .r-title{font-weight:600;font-size:14px;}",
+    ".receipt .r-sub{color:var(--muted);font-size:12px;margin:2px 0 8px;}",
+    ".steps{font-size:12.5px;margin:6px 0;}",
+    ".steps .st{padding:3px 0;border-bottom:1px dashed #efeee9;}",
+    ".steps .st:last-child{border-bottom:0;}",
+    ".steps .tool{font-weight:600;margin-right:6px;}",
+    ".tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}",
+    ".tbl th{background:#f4f4f0;border:1px solid var(--line);padding:4px 6px;text-align:left;color:#555;}",
+    ".tbl td{border:1px solid var(--line);padding:4px 6px;vertical-align:top;}",
+    ".optbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}",
+    ".optbtns button{padding:7px 14px;font-size:13px;border-radius:999px;background:#fff;color:var(--accent);border:1px solid var(--line);}",
+    ".optbtns button:hover{border-color:var(--accent);}",
+    ".pick{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:#fcfcfa;color:var(--ink);}"
+  ].join("");
+  document.head.appendChild(style);
+
+  const tabBtn = document.createElement("button");
+  tabBtn.className = "tab";
+  tabBtn.dataset.tab = "archive";
+  tabBtn.setAttribute("role", "tab");
+  tabBtn.setAttribute("aria-controls", "pane-archive");
+  tabBtn.textContent = "归档";
+  document.getElementById("tabs").appendChild(tabBtn);
+
+  const pane = document.createElement("section");
+  pane.className = "pane";
+  pane.id = "pane-archive";
+  pane.hidden = true;
+  pane.setAttribute("role", "tabpanel");
+  pane.innerHTML = [
+    '<div class="panel"><label class="field-label">归档存储位置（本机文件夹，留空用默认）</label>',
+    '<div class="row"><span class="hint" style="width:88px">归档原件</span><input type="text" id="store-docs" style="flex:1 1 240px" placeholder="默认 data/docs"><button class="ghost" data-pick="docs">选择…</button></div>',
+    '<div class="row"><span class="hint" style="width:88px">用户资料</span><input type="text" id="store-users" style="flex:1 1 240px" placeholder="默认 data/users"><button class="ghost" data-pick="users">选择…</button></div>',
+    '<div class="row"><span class="hint" style="width:88px">wiki 收件箱</span><input type="text" id="store-wiki" style="flex:1 1 240px" placeholder="默认 data/wiki_raw"><button class="ghost" data-pick="wiki">选择…</button></div>',
+    '<div class="row"><button class="ghost" id="store-save">保存位置</button><span class="hint" id="store-hint"></span></div>',
+    '</div>',
+    '<div class="panel">',
+    '<label class="field-label">拖一个文件进来（或点击选择）：md / txt / html / docx 直接可用，PDF 需装 pypdf</label>',
+    '<div class="dropzone" id="dropzone"><b>拖文件到这里</b><span class="hint">单文件 ≤ 50 MB ｜ 原件自动归档，同名不覆盖</span></div>',
+    '<input type="file" id="archive-file" hidden>',
+    '<div class="chips" id="archive-files"></div>',
+    '<label class="field-label" for="archive-prompt" style="margin-top:14px">提示词：告诉 agent 这是什么、想怎么归档</label>',
+    '<textarea id="archive-prompt" placeholder="例如：这是民法总论的课堂笔记，归到课程笔记并核验它引用的法条 / 这是一篇法学期刊论文，做文献页 / 这是《民法典》合同编全文，收进资料索引"></textarea>',
+    '<div class="row">',
+    '<select class="pick" id="archive-target">',
+    '<option value="">自动判断（推荐）</option>',
+    '<option value="note">课程笔记</option>',
+    '<option value="paper">法学论文 / 文献</option>',
+    '<option value="doc">资料索引</option>',
+    '<option value="case">案例</option>',
+    '<option value="law">法条核对（只出报告）</option>',
+    "</select>",
+    '<button id="archive-send">归档</button>',
+    '<span class="hint" id="archive-hint"></span>',
+    "</div>",
+    '<div class="chips" id="archive-chips"></div>',
+    "</div>",
+    '<div class="panel"><div class="row" style="margin-top:0">',
+    '<button class="ghost" id="archive-refresh">刷新归档记录</button>',
+    '<span class="hint" id="archive-count"></span></div></div>',
+    '<div class="panel"><label class="field-label" for="docs-q">资料库检索（已归档的笔记 / 论文 / 资料）</label>',
+    '<div class="row" style="margin-top:0"><input type="text" id="docs-q" style="flex:1 1 260px" placeholder="例如：意思表示 / 电子代理人 / 善意取得"><button class="ghost" id="docs-search">检索</button></div>',
+    '<div id="docs-hits"></div></div>',
+    '<div class="panel"><div class="row" style="margin-top:0">',
+    '<button class="ghost" id="docs-refresh">刷新我的资料</button>',
+    '<span class="hint" id="docs-count"></span></div>',
+    '<div id="docs-list"></div></div>',
+    '<div id="receipt-list"></div>'
+  ].join("");
+  document.querySelector("main").appendChild(pane);
+
+  tabBtn.addEventListener("click", () => {
+    switchTab("archive");
+    loadStorage();
+    loadReceipts(true);
+    loadDocs(true);
+  });
+
+  // ---------------- 归档存储位置 ----------------
+  const STORE_INPUT = {docs: "#store-docs", users: "#store-users", wiki: "#store-wiki"};
+
+  async function loadStorage() {
+    const hint = $("#store-hint");
+    try {
+      const data = await readJSON(await api("/api/storage"));
+      const p = (data && data.paths) || {};
+      [["docs", p.docs_dir], ["users", p.users_dir], ["wiki", p.wiki_raw]].forEach(([k, v]) => {
+        const input = $(STORE_INPUT[k]);
+        if (!input || !v) return;
+        input.value = v.set || "";
+        input.placeholder = "默认：" + v.resolved;
+      });
+      const bad = Object.keys(p).filter((k) => p[k] && !p[k].writable);
+      hint.textContent = bad.length
+        ? ("不可写：" + bad.join("、") + (p[bad[0]].error ? "（" + p[bad[0]].error + "）" : ""))
+        : "三个位置均可写";
+    } catch (err) {
+      hint.textContent = "读取存储位置失败：" + err.message;
+    }
+  }
+
+  pane.querySelectorAll("[data-pick]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const input = $(STORE_INPUT[btn.dataset.pick]);
+      btn.disabled = true;
+      try {
+        const res = await postJSON("/api/pick-folder", {initial: (input && input.value) || ""});
+        if (res.path && input) input.value = res.path;
+        if (res.cancelled) $("#store-hint").textContent = "已取消选择";
+      } catch (err) {
+        $("#store-hint").textContent = "打开选择框失败：" + err.message;
+      }
+      btn.disabled = false;
+    });
+  });
+
+  $("#store-save").addEventListener("click", async () => {
+    const btn = $("#store-save");
+    btn.disabled = true;
+    try {
+      await postJSON("/api/storage", {
+        docs_dir: $("#store-docs").value.trim(),
+        users_dir: $("#store-users").value.trim(),
+        wiki_raw: $("#store-wiki").value.trim(),
+      });
+      await loadStorage();
+    } catch (err) {
+      $("#store-hint").textContent = "保存失败：" + err.message;
+    }
+    btn.disabled = false;
+  });
+
+  const drop = $("#dropzone");
+  const fileInput = $("#archive-file");
+  drop.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) upload(fileInput.files[0]);
+    fileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.add("drag");
+  }));
+  ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => {
+    e.preventDefault();
+    drop.classList.remove("drag");
+  }));
+  drop.addEventListener("drop", (e) => {
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) upload(f);
+  });
+
+  function renderFiles() {
+    const box = $("#archive-files");
+    clear(box);
+    if (!state.doc) return;
+    const chip = el("span", "filechip");
+    chip.appendChild(el("span", null, state.doc.name + " · " + state.doc.kind + " · " + state.doc.chars + " 字 · " + state.doc.chunks + " 块"));
+    const x = el("span", "x", "✕");
+    x.onclick = () => {
+      state.doc = null;
+      renderFiles();
+      $("#archive-hint").textContent = "";
+    };
+    chip.appendChild(x);
+    box.appendChild(chip);
+  }
+
+  async function upload(file) {
+    const hint = $("#archive-hint");
+    hint.textContent = "上传并解析中……";
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    try {
+      const resp = await api("/api/upload", {method: "POST", body: fd});
+      const data = await readJSON(resp);
+      state.doc = data.doc;
+      renderFiles();
+      hint.textContent = "已解析：" + data.doc.title + "（" + data.doc.chars + " 字）";
+    } catch (err) {
+      hint.textContent = "";
+      errCard("上传失败：" + err.message);
+    }
+  }
+
+  function errCard(msg) {
+    const box = $("#receipt-list");
+    const card = el("div", "receipt need");
+    card.appendChild(el("div", "r-title", "出错了"));
+    card.appendChild(el("div", "r-sub", msg));
+    box.insertBefore(card, box.firstChild);
+  }
+
+  function receiptCard(r, prepend) {
+    const st = STATUS[r.status] || ["未知", "plain"];
+    const card = el("div", "receipt" + (r.status === "need_confirm" ? " need" : ""));
+    const head = el("div", "r-head");
+    head.appendChild(badge(st[0], st[1]));
+    const plan = r.plan || {};
+    head.appendChild(el("span", "r-title", TARGET_LABEL[r.target] || plan.target || "未定"));
+    if (plan.course) head.appendChild(badge(COURSE_LABEL[plan.course] || plan.course, "plain"));
+    if (plan.confidence !== undefined) head.appendChild(badge("置信度 " + Number(plan.confidence).toFixed(2), "plain"));
+    if (r.doc && r.doc.name) head.appendChild(el("span", "hint", r.doc.name));
+    card.appendChild(head);
+    const sub = [];
+    if (plan.reason) sub.push(plan.reason);
+    if (r.elapsed_ms) sub.push("耗时 " + r.elapsed_ms + " ms");
+    if (r.receipt_id) sub.push("回执 " + r.receipt_id);
+    if (sub.length) card.appendChild(el("div", "r-sub", sub.join(" ｜ ")));
+
+    if (r.status === "need_confirm") {
+      card.appendChild(el("div", null, r.question || "应该归档到哪一类？"));
+      const btns = el("div", "optbtns");
+      (r.options || []).forEach((o) => {
+        const b = document.createElement("button");
+        b.textContent = o.label;
+        b.onclick = async () => {
+          b.disabled = true;
+          try {
+            const res = await postJSON("/api/agent/confirm", {receipt_id: r.receipt_id, target: o.target});
+            receiptCard(res, true);
+            loadReceipts(true);
+          } catch (err) {
+            errCard("确认失败：" + err.message);
+          }
+        };
+        btns.appendChild(b);
+      });
+      card.appendChild(btns);
+    }
+
+    if (Array.isArray(r.steps) && r.steps.length) {
+      const steps = el("div", "steps");
+      r.steps.forEach((s) => {
+        const row = el("div", "st");
+        row.appendChild(el("span", s.ok ? "tool ok" : "tool no", (s.ok ? "✓ " : "✗ ") + s.tool));
+        row.appendChild(document.createTextNode((s.detail || "") + (s.ms ? "（" + s.ms + " ms）" : "")));
+        steps.appendChild(row);
+      });
+      card.appendChild(steps);
+    }
+
+    const c = r.citations || {};
+    if (c.checked) {
+      card.appendChild(el("div", "r-sub", "引用核验：" + c.checked + " 处 ｜ 通过 " + c.passed + " ｜ 未通过 " + c.failed + " ｜ 状态提醒 " + c.warnings));
+      const tbl = document.createElement("table");
+      tbl.className = "tbl";
+      const thead = document.createElement("tr");
+      ["《法名》条号", "库内", "逐字", "状态"].forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        thead.appendChild(th);
+      });
+      tbl.appendChild(thead);
+      (c.items || []).forEach((it) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(el("td", null, "《" + it.law + "》" + it.article_no));
+        tr.appendChild(el("td", null, it.found ? "✓" : "✗"));
+        tr.appendChild(el("td", null, it.quote_ok === null ? "—" : (it.quote_ok ? "✓" : "✗")));
+        tr.appendChild(el("td", null, (it.status || "—") + (it.warning ? "（" + it.warning + "）" : "")));
+        tbl.appendChild(tr);
+      });
+      card.appendChild(tbl);
+    }
+
+    (r.notes || []).forEach((n) => card.appendChild(el("div", "r-sub", "· " + n)));
+    if (r.produced) card.appendChild(el("div", "r-sub", "产物：" + r.produced));
+
+    const box = $("#receipt-list");
+    if (prepend) box.insertBefore(card, box.firstChild);
+    else box.appendChild(card);
+  }
+
+  async function send() {
+    if (!state.doc) {
+      $("#archive-hint").textContent = "先拖一个文件进来";
+      return;
+    }
+    const btn = $("#archive-send");
+    btn.disabled = true;
+    $("#archive-hint").textContent = "Agent 决策与归档中……";
+    try {
+      const data = await postJSON("/api/agent/ingest", {
+        doc_id: state.doc.doc_id,
+        prompt: $("#archive-prompt").value.trim(),
+        target: $("#archive-target").value
+      });
+      receiptCard(data, true);
+      state.doc = null;
+      renderFiles();
+      $("#archive-prompt").value = "";
+      $("#archive-hint").textContent = "完成";
+      loadReceipts(true);
+    } catch (err) {
+      $("#archive-hint").textContent = "";
+      errCard("归档失败：" + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function loadReceipts(force) {
+    const box = $("#receipt-list");
+    clear(box);
+    try {
+      const data = await getJSON("/api/receipts?limit=10");
+      const items = data.items || [];
+      $("#archive-count").textContent = items.length ? "最近 " + items.length + " 条归档记录" : "还没有归档记录";
+      items.forEach((r) => receiptCard(r, false));
+    } catch (err) {
+      $("#archive-count").textContent = "加载失败：" + err.message;
+    }
+  }
+
+  async function loadDocs() {
+    const box = $("#docs-list");
+    const hint = $("#docs-count");
+    clear(box);
+    hint.textContent = "加载中……";
+    try {
+      const data = await getJSON("/api/docs?limit=50");
+      const items = Array.isArray(data.items) ? data.items : [];
+      hint.textContent = items.length ? "我的资料共 " + items.length + " 条" : "还没有上传过资料";
+      if (!items.length) {
+        box.appendChild(el("div", "empty", "上传文件并归档后，会在这里列出（只显示你自己的资料）。"));
+        return;
+      }
+      items.forEach((d) => {
+        const row = el("div", "hit");
+        row.appendChild(el("b", null, d.title || d.name || d.doc_id));
+        row.appendChild(el("div", "meta",
+          [d.kind || "", d.chars ? d.chars + " 字" : "", d.chunks ? d.chunks + " 块" : "",
+           d.created_at || ""].filter(Boolean).join("　")));
+        box.appendChild(row);
+      });
+    } catch (err) {
+      hint.textContent = "";
+      box.appendChild(el("div", "err", "加载失败：" + err.message));
+    }
+  }
+
+  $("#archive-send").onclick = send;
+  $("#archive-refresh").onclick = () => loadReceipts(true);
+  $("#docs-refresh").onclick = loadDocs;
+
+  async function searchDocs() {
+    const q = $("#docs-q").value.trim();
+    const box = $("#docs-hits");
+    clear(box);
+    if (!q) return;
+    box.appendChild(el("div", "loading", "检索中……"));
+    try {
+      const data = await postJSON("/api/docs/search", {q: q, k: 8});
+      clear(box);
+      const hits = data.hits || [];
+      if (!hits.length) {
+        box.appendChild(el("div", "empty", "没有命中：资料库可能还是空的，或换个词试试。"));
+        return;
+      }
+      hits.forEach((h) => {
+        const row = el("div", "hit");
+        row.appendChild(el("b", null, h.title || h.name));
+        row.appendChild(el("div", "meta", "第 " + ((h.seq || 0) + 1) + " 块" + (typeof h.score === "number" ? "　bm25 " + h.score.toFixed(2) : "")));
+        row.appendChild(el("div", null, h.preview || ""));
+        box.appendChild(row);
+      });
+    } catch (err) {
+      clear(box);
+      box.appendChild(el("div", "err", "检索失败：" + err.message));
+    }
+  }
+  $("#docs-search").onclick = searchDocs;
+  bindEnter("#docs-q", searchDocs);
+  renderChips("archive-chips", [
+    "这是民法总论的课堂笔记，按课程笔记归档",
+    "这是一篇法学论文，做文献页并核验其中引用的法条",
+    "这是《民法典》合同编全文，收进资料索引",
+    "核对这份文件里的法条引用，只出报告"
+  ], "#archive-prompt", () => send());
+
+  window.__afterAuth = function () {
+    if (/[?&]tab=archive/.test(location.search)) {
+      switchTab("archive");
+      loadReceipts(true);
+      loadDocs();
+    }
+  };
+})();
+
+bootAuth();
+</script>
+
+<footer class="site-foot">
+  <details class="credits">
+    <summary>致谢 / Credits</summary>
+    <ul>
+      <li><a href="https://github.com/ImCa0/just-laws" target="_blank" rel="noopener">just-laws</a>（MIT）— 现行法条正文</li>
+      <li><a href="https://github.com/lawtext/laws" target="_blank" rel="noopener">lawtext</a> — 行政法规、司法解释与已废止文本（由<a href="https://flk.npc.gov.cn/" target="_blank" rel="noopener">国家法律法规数据库</a>官方文本转换）</li>
+      <li><a href="https://github.com/fxsjy/jieba" target="_blank" rel="noopener">jieba</a>（MIT）— 中文分词</li>
+      <li>SQLite FTS5（Public Domain）— 全文索引</li>
+      <li><a href="https://huggingface.co/BAAI/bge-m3" target="_blank" rel="noopener">BAAI bge-m3</a>（MIT）— 向量检索</li>
+      <li><a href="https://ollama.com/" target="_blank" rel="noopener">Ollama</a>（MIT）— 本地模型运行</li>
+      <li><a href="https://github.com/QwenLM/Qwen3" target="_blank" rel="noopener">Qwen3</a>（Apache-2.0）— 问答生成</li>
+      <li>nginx（BSD-2）· certbot（Apache-2.0）· frp（Apache-2.0）— 部署与转发</li>
+      <li><a href="https://github.com/Golden2002/legal-research-skill" target="_blank" rel="noopener">legal-research-skill</a>（MIT）— 引用核验思路</li>
+    </ul>
+    <p class="hint">本工具仅供学习与研究，不构成法律意见，不用于商业用途；法条效力以国家法律法规数据库为准。</p>
+  </details>
+  <div class="beian">
+    <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">豫ICP备2026026435号-2</a>
+    <span>·</span>
+    <a href="https://beian.mps.gov.cn/#/query/webSearch?code=41150302000223" target="_blank" rel="noopener">公安备案 41150302000223</a>
+  </div>
+</footer>
+<style>
+.site-foot { max-width: 1100px; margin: 40px auto 24px; padding: 16px 20px 8px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.site-foot .credits summary { cursor: pointer; color: var(--muted); }
+.site-foot .credits ul { margin: 10px 0 6px; padding-left: 18px; line-height: 1.9; }
+.site-foot .credits a, .site-foot .beian a { color: inherit; text-decoration: underline; }
+.site-foot .beian { margin-top: 10px; text-align: center; }
+.site-foot .beian span { margin: 0 6px; }
+</style>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# 运行环境
+.venv/
+__pycache__/
+*.pyc
+
+# 数据与用户内容（体积大、且含个人资料）
+data/db/*.db
+data/db/*.npy
+data/db/*.txt
+data/db/*.bak*
+data/raw/
+data/interim/
+data/docs/
+data/users/
+data/inbox/
+data/wiki_raw/
+data/reports/
+data/settings.json
+data/.installed_version
+
+# 日志与临时文件
+*.log
+*.tmp
+
+# 系统
+Thumbs.db
+desktop.ini
+.DS_Store
